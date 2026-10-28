@@ -16,5 +16,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/doc', [DocController::class, 'index'])->name('Doc.index');
     Route::post('/docs', [DocController::class, 'store'])->name('Doc.store');
-    Route::delete('/docs/{id}', [DocController::class, 'destroy'])->name('Doc.destroy');
+    Route::delete('/docs/{doc}', [DocController::class, 'destroy'])->name('Doc.destroy');
+    Route::get('/docs/{doc}', [DocController::class, 'show'])->name('Doc.show');
+    Route::patch('/docs/{doc}', [DocController::class, 'update'])->name('Doc.update');
 });
