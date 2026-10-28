@@ -1,4 +1,4 @@
-export default function Doc({ { document } : {document: {title: string, content: string | null}}) {
+export default function Doc({ document }: {document: {title: string, content: string | null}}) {
     return (
         <div>
             <h1>{document.title}</h1>
