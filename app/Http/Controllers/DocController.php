@@ -3,6 +3,7 @@ namespace App\Http\Controllers;
 use App\Models\Doc;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Gate;
 
 class DocController extends Controller {
     public function index(Request $request) {

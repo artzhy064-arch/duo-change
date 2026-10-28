@@ -15,7 +15,7 @@ class PermissionController extends Controller
             'role' => 'required|in:viewer,editor,commenter',
         ]);
         $user = User::where('email', $data['email'])->firstOrFail();
-        if ($user->id === $doc->owner_id) {
+        if ((int) $user->id === (int) $doc->owner_id) {
             return back()->withErrors(['email' => 'Cannot share with the owner.']);
         }
         $doc->sharedUsers()->syncWithoutDetaching([$user->id => ['role' => $data['role']]]);
