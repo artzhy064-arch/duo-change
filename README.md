@@ -36,7 +36,7 @@ Laravel 13, Inertia.js, React, Tailwind CSS, SQLite, Laravel Reverb (плани�
 
 ## Запуск
 ```bash
-git clone <ссылка на репозиторий>
+git clone https://github.com/artzhy064-arch/duo-change
 cd collab-docs
 composer install
 npm install
