@@ -21,7 +21,6 @@ export default function Doc({ document: doc, role, shared }: Props) {
     });
 
     function onType(value: string) {
-        console.log('typing', value);
         setContent(value);
         const token = decodeURIComponent(
             document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? ''
