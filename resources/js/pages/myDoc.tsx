@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import '../../css/app.css';
-import {router, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 
 
 type Theme = 'light' | 'dark' | 'mixed';
@@ -9,13 +9,9 @@ type DocumentItem = {
     id: number;
     title: string;
     content: string | null;
-    visibility: string;
+    owner_id: number;
     created_at: string;
     updated_at: string;
-    category: string;
-    favorite: boolean;
-    color: string;
-    updated: string;
 };
 
 type MyDocProps = {
@@ -48,6 +44,10 @@ function createDocument() {
 
     router.post( '/docs' , {title: title.trim() }, { onSuccess: () => setNewTitle('') });
 }
+function deleteDocument(id: number) {
+    if (!confirm('Удалить документ?')) return;
+    router.delete(`/docs/${id}`);
+}
 
 // function toggleFavorite(id: number) {
 //     setDocs((previous) =>
@@ -59,10 +59,6 @@ function createDocument() {
 
 const filteredDocuments = documents.filter((item) => {
     const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
-
-    if (section === 'favorites') {
-        return matchesSearch && item.favorite;
-    }
 
     if (section === 'recent') {
         return matchesSearch;
@@ -248,16 +244,14 @@ return (
                                         <div className="paper-line"></div>
                                         <div className="paper-line paper-short"></div>
                                     </div>
-                                    <button className="favorite-button" title={item.favorite ? 'Убрать из избранного' : 'Добавить в избранное'}>
-                                        {item.favorite ? '★' : '☆'}
-                                    </button>
                                     <span className="file-type">DOC</span>
                                 </div>
 
                                 <div className="document-details">
                                     <div className="document-title-row">
-                                        <span className={`file-icon file-${item.color}`}>▤</span>
-                                        <h3>{item.title}</h3>
+                                        <span className={"file-icon"}>▤</span>
+                                        <h3><Link href={`/docs/${item.id}`}>{item.title}</Link></h3>
+                                        <button onClick={() => deleteDocument(item.id)}>Удалить</button>
                                         <button className="more-button" title="Дополнительные действия" onClick={() => window.alert('Меню документа добавим позже.')}>···</button>
                                     </div>
                                     <div className="document-meta">
