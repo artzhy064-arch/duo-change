@@ -23,7 +23,10 @@ class DocController extends Controller {
     }
     public function show(Request $request, Doc $doc) {
         Gate::authorize('view', $doc);
-        return Inertia::render('doc', ['document' => $doc]);
+        return Inertia::render('doc', [
+            'document' => $doc,
+            'role' => $doc->roleFor($request->user()),
+        ]);
     }
     public function update(Request $request, Doc $doc) {
         Gate::authorize('update', $doc);
