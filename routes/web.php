@@ -4,6 +4,7 @@ Route::inertia('/', 'welcome')->name('home');
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocController;
+use App\Http\Controllers\PermissionController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {

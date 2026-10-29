@@ -23,9 +23,15 @@ class DocController extends Controller {
     }
     public function show(Request $request, Doc $doc) {
         Gate::authorize('view', $doc);
+        $role = $doc->roleFor($request->user());
         return Inertia::render('doc', [
             'document' => $doc,
-            'role' => $doc->roleFor($request->user()),
+            'role' => $role,
+            'shared' => $role === 'owner' ? $doc->sharedUsers->map(fn ($u) => [
+                'id' => $u->id,
+                'email' => $u->email,
+                'role' => $u->pivot->role,
+            ]) : [],
         ]);
     }
     public function update(Request $request, Doc $doc) {
