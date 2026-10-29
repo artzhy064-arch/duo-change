@@ -23,4 +23,5 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs/{doc}/share', [PermissionController::class, 'store']);
     Route::patch('/docs/{doc}/share/{user}', [PermissionController::class, 'update']);
     Route::delete('/docs/{doc}/share/{user}', [PermissionController::class, 'destroy']);
+    Route::post('/docs/{doc}/edit', [DocController::class, 'edit']);
 });
