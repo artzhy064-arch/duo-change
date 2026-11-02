@@ -2,6 +2,7 @@
 
 Route::inertia('/', 'welcome')->name('home');
 
+use App\Http\Controllers\OperationController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DocController;
 use App\Http\Controllers\PermissionController;
@@ -23,5 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs/{doc}/share', [PermissionController::class, 'store']);
     Route::patch('/docs/{doc}/share/{user}', [PermissionController::class, 'update']);
     Route::delete('/docs/{doc}/share/{user}', [PermissionController::class, 'destroy']);
-    Route::post('/docs/{doc}/edit', [DocController::class, 'edit']);
+    // Route::post('/docs/{doc}/edit', [DocController::class, 'edit']);
+    Route::post('/docs/{doc}/ops', [OperationController::class, 'store']);
+    Route::get('/docs/{doc}/ops', [OperationController::class, 'index']);
 });

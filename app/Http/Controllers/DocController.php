@@ -4,7 +4,7 @@ use App\Models\Doc;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
-use App\Events\DocEdited;
+// use App\Events\DocEdited;
 
 class DocController extends Controller {
     public function index(Request $request) {
@@ -37,20 +37,17 @@ class DocController extends Controller {
     }
     public function update(Request $request, Doc $doc) {
         Gate::authorize('update', $doc);
-        $data = $request->validate([
-            'title' => 'sometimes|string|max:255',
-            'content' => 'sometimes|nullable|string'
-        ]);
+        $request->validate(['title' => 'required|string|max:255']);
         $doc->update($data);
         return back();
     }
-    public function edit(Request $request, Doc $doc) {
-        Gate::authorize('update', $doc);
-        $data = $request->validate([
-            'content' => 'nullable|string',
-            'clientId' => 'required|string',
-        ]);
-        event(new DocEdited($doc->id, $data['content'] ?? '', $data['clientId']));
-        return response()->noContent();
-    }
+    // public function edit(Request $request, Doc $doc) {
+    //     Gate::authorize('update', $doc);
+    //     $data = $request->validate([
+    //         'content' => 'nullable|string',
+    //         'clientId' => 'required|string',
+    //     ]);
+    //     event(new DocEdited($doc->id, $data['content'] ?? '', $data['clientId']));
+    //     return response()->noContent();
+    // }
 }

@@ -10,7 +10,6 @@ class Doc extends Model
 
     protected $fillable =  [
         'title',
-        'content',
         'visibility'
     ];
     public function owner() {
