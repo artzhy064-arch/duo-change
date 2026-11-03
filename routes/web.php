@@ -27,4 +27,7 @@ Route::middleware('auth')->group(function () {
     // Route::post('/docs/{doc}/edit', [DocController::class, 'edit']);
     Route::post('/docs/{doc}/ops', [OperationController::class, 'store']);
     Route::get('/docs/{doc}/ops', [OperationController::class, 'index']);
+    Route::get('/docs/{doc}/history', [HistoryController::class, 'index']);
+    Route::get('/docs/{doc}/history/{version}', [HistoryController::class, 'show']);
+    Route::post('/docs/{doc}/history/{version}', [HistoryController::class, 'revert']);
 });

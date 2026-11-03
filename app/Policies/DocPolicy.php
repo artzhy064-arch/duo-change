@@ -67,4 +67,8 @@ class DocPolicy
     {
         return $doc->roleFor($user) === 'owner';
     }
+    public function revert(User $user, Doc $doc): bool 
+    {
+        return $doc->owner_id === $user->id;
+    }
 }

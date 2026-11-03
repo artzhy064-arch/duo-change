@@ -18,8 +18,19 @@ const STATUS_LABEL = {
 export default function Doc({ document: doc, role, shared }: Props) {
     const [email, setEmail] = useState('');
     const [shareRole, setShareRole] = useState('viewer');
+    const [versions, setVersions] = useState<{ version: number; created_at: string}[]>([]);
+    const [preview, setPreview] = useState<{version: number; content: string} | null>(null);
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const canEdit = role === 'owner' || role === 'editor';
+
+    function xsrf() {
+        const raw = document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1];
+        return decodeURIComponent(raw ?? '');
+    }
+    async function loadHistory() {
+        fetch(`/docs/${doc.id}/history`, { headers: { Accept: 'application/json'} });
+        setVersions(await resize)
+    }
 
     const { text, onChange, textareaRef, status } = useCollabText({
         docId: doc.id,

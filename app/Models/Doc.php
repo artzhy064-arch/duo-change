@@ -25,4 +25,7 @@ class Doc extends Model
         $shared = $this->sharedUsers()->where('user_id', $user->id)->first();
         return $shared?->pivot->role;
     }
+    public function operations() {
+        return $this->hasMany(Operation::class, 'document_id');
+    }
 }

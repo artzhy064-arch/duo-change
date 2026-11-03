@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Doc;
 use App\Models\Operation;
 use App\Models\User;
+use App\Models\Snapshot;
 use App\Ot\OtException;
 use App\Ot\OTTransformer;
 use App\Ot\TextOperation;
@@ -72,7 +73,9 @@ class SyncService
 
                 // Обновляем сам документ: новый текст и номер версии
                 $fresh->forceFill(['content' => $newContent, 'version' => $version])->save();
-
+                if ($version % 50 === 0) {
+                    Snapshot::create(['document_id' => $fresh->id, 'version' => $version, 'content' => $newContent]);
+                }
                 return $operation;
             });
             event(new \App\Events\OperationApplied($operation));
