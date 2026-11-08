@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('snapshots', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('documentId')->constrained('documents')->cascadeOnDelete();
+            $table->foreignId('document_id')->constrained('documents')->cascadeOnDelete();
             $table->unsignedInteger('version');
             $table->longText('content');
             $table->timestamps();

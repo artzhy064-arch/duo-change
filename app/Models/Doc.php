@@ -28,4 +28,8 @@ class Doc extends Model
     public function operations() {
         return $this->hasMany(Operation::class, 'document_id');
     }
+    public function comments()
+    {
+        return $this->hasMany(Comment::class, 'document_id');
+    }
 }

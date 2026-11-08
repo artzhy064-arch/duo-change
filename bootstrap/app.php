@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
         ]);
+        $middleware->trimStrings(except: [fn (\Illuminate\Http\Request $r) => $r->is('docs/*/ops')]);
+        $middleware->convertEmptyStringsToNull(except: [fn (\Illuminate\Http\Request $r) => $r->is('docs/*/ops')]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

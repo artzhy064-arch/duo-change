@@ -96,4 +96,26 @@ final class TextOperation
         }
         return $out;
     }
+    // операция «from -> to»: общий префикс и суффикс остаются, середина заменяется
+    public static function diff(string $from, string $to): self {
+        $a = mb_str_split($from, 1, 'UTF-8');
+        $b = mb_str_split($to, 1, 'UTF-8');
+
+        // сколько символов совпадает с начала
+        $start = 0;
+        $min = min(count($a), count($b));
+        while ($start < $min && $a[$start] === $b[$start]) {
+            $start++;
+        }
+
+        // сколько совпадает с конца (не залезая на начало)
+        $endA = count($a);
+        $endB = count($b);
+        while ($endA > $start && $endB > $start && $a[$endA - 1] === $b[$endB - 1]) {
+            $endA--;
+            $endB--;
+        }
+
+        return (new self)->retain($start)->delete($endA - $start)->insert(implode('', array_slice($b, $start, $endB - $start)))->retain(count($a) - $endA);
+    }
 }

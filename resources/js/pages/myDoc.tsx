@@ -25,8 +25,9 @@ export default function MyDoc({ documents: documents = [] }: MyDocProps) {
     const [section, setSection] = useState('all');
     const [showThemes, setShowThemes] = useState(false);
     const [newTitle, setNewTitle] = useState('');
+    const { errors } = usePage<{ errors: Record<string, string> }>().props;
 useEffect(() => {
-    const savedTheme = localStorage.getItem('mydocs-theme') as Theme | null;
+    const savedTheme = localStorage.getItem('mydocs-theme') as Theme | null; 
 
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'mixed') {
         setTheme(savedTheme);
@@ -84,7 +85,10 @@ return (
             <button className="create-button" onClick={createDocument}>
                 <span>＋</span> Создать документ
             </button>
+            <input type="file" accept=".txt,.md" onChange={(e) => { const file = e.target.files?.[0];
+                if (file) router.post('/docs/import', { file }, { forceFormData: true }); }} />
             <br />
+            {errors.file && <p>{errors.file}</p>}
             <input value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder='Название документа'></input>
             <div className="nav-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
 

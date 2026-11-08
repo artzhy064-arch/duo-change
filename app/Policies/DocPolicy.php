@@ -71,4 +71,22 @@ class DocPolicy
     {
         return $doc->owner_id === $user->id;
     }
+    // роль пользователя в документе: owner, editor, commenter, viewer или null
+    private function roleOf(User $user, Doc $doc): ?string
+    {
+        if ($doc->owner_id === $user->id) return 'owner';
+        return $doc->sharedUsers()->where('users.id', $user->id)->first()?->pivot->role;
+    }
+
+    // комментировать: владелец, редактор, комментатор
+    public function comment(User $user, Doc $doc): bool
+    {
+        return in_array($this->roleOf($user, $doc), ['owner', 'editor', 'commenter']);
+    }
+
+    // закрывать и открывать заново: владелец и редактор
+    public function resolve(User $user, Doc $doc): bool
+    {
+        return in_array($this->roleOf($user, $doc), ['owner', 'editor']);
+    }
 }
