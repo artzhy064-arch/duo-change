@@ -9,6 +9,7 @@ use App\Services\HistoryService;
 use App\Services\SyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Models\ActivityLog;
 
 class HistoryController extends Controller
 {
@@ -37,6 +38,7 @@ class HistoryController extends Controller
 
         if ($target === ($doc->content ?? '')) {
             return responce()->json(['version' => $doc->version]);
+            ActivityLog::add('doc.revert', $doc, 'на версию ' . $version);
         }
 
         $new = $sync->submit($doc, $request->user(), 'revert', $doc->version, $op->ops());

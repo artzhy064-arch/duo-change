@@ -7,6 +7,7 @@ use App\Services\SyncService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
+use App\Models\ActivityLog;
 
 class FileController extends Controller
 {
@@ -36,6 +37,7 @@ class FileController extends Controller
 
         $title = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $doc = $request->user()->docs()->create(['title' => $title]);
+        ActivityLog::add('doc.import', $doc);
 
         if ($text !== '') $sync->submit($doc, $request->user(), 'import', 0, [$text]);
         return redirect('/docs/' . $doc->id);

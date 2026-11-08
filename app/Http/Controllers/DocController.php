@@ -4,6 +4,7 @@ use App\Models\Doc;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
+use App\Models\ActivityLog;
 // use App\Events\DocEdited;
 
 class DocController extends Controller {
@@ -16,11 +17,13 @@ class DocController extends Controller {
         $request->validate(['title' => 'required|string|max:255']);
         $request->user()->docs()->create(['title' => $request->title]);
         return redirect()->route('Doc.index');
+        ActivityLog::add('doc.create', $doc);
     }
     public function destroy(Request $request, Doc $doc) {
         Gate::authorize('delete', $doc);
         $doc->delete();
         return redirect()->route('Doc.index');
+        ActivityLog::add('doc.delete', $doc, $doc->title);
     }
     public function show(Request $request, Doc $doc) {
         Gate::authorize('view', $doc);

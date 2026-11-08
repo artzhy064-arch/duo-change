@@ -6,6 +6,7 @@ use App\Models\Comment;
 use App\Models\Doc;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use App\Models\ActivityLog;
 
 class CommentController extends Controller
 {
@@ -47,6 +48,7 @@ class CommentController extends Controller
             'author_id' => $request->user()->id,
             'anchor_version' => $doc->version,
         ]);
+        ActivityLog::add('comment.add', $doc);
 
         return $comment->load('author:id,name');
     }
@@ -59,6 +61,7 @@ class CommentController extends Controller
         abort_if($comment->status === 'resolved', 422, 'Уже закрыт.');
 
         $comment->update(['status' => 'resolved', 'resolved_at' => now()]);
+        ActivityLog::add('comment.resolve', $doc);
         return $comment;
     }
 

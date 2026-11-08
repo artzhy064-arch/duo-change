@@ -9,6 +9,7 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\HistoryController;
 use App\Http\Controllers\FileController;
 use App\Http\Controllers\CommentController;
+use App\Http\Controllers\AdminController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
@@ -39,4 +40,6 @@ Route::middleware('auth')->group(function () {
     Route::post('/docs/{doc}/comments', [CommentController::class, 'store']);
     Route::post('/docs/{doc}/comments/{comment}/resolve', [CommentController::class, 'resolve']);
     Route::post('/docs/{doc}/comments/{comment}/reopen', [CommentController::class, 'reopen']);
+    Route::get('/admin', [AdminController::class, 'index']);
+    Route::patch('/admin/users/{user}/quota', [AdminController::class, 'quota']);
 });

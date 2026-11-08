@@ -60,6 +60,14 @@ class SyncService
 
                 // Применяем к текущему тексту (если длина не совпадёт, будет OtException)
                 $newContent = $incoming->apply($fresh->content ?? '');
+                
+                // квота владельца: блокируем только правки, которые увеличивают текст
+                $owner = $fresh->owner;
+                $grows = strlen($newContent) > strlen($fresh->content ?? '');
+                $used = Doc::where('owner_id', $owner->id)->where('id', '!=', $fresh->id)->sum(DB::raw('length(content)')) + strlen($newContent);
+                if ($grows && $used > $owner->storage_quota_kb * 1024) {
+                    throw new OtException('Превышена квота хранения владельца документа.');
+                }
                 $version = $fresh->version + 1;
 
                 // Пишем в журнал уже ПЕРЕНЕСЁННУЮ операцию
