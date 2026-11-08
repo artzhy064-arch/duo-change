@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Link, router, usePage } from '@inertiajs/react';
 import { useCollabText } from '../hooks/useCollabText';
+import { usePresence } from '../hooks/usePresence';
+import RemoteCursors, { colorOf } from '../components/RemoteCursors';
 import CommentsPanel from '../components/CommentsPanel';
 import type { Selection } from '../components/CommentsPanel';
 
@@ -8,6 +10,7 @@ type Props = {
     document: { id: number; title: string; content: string | null; version: number };
     role: 'owner' | 'editor' | 'commenter' | 'viewer';
     shared: { id: number; email: string; role: string }[];
+    me: { id: number; name: string };
 };
 
 const STATUS_LABEL = {
@@ -17,14 +20,31 @@ const STATUS_LABEL = {
     error: 'Ошибка синхронизации — обновите страницу',
 } as const;
 
-export default function Doc({ document: doc, role, shared }: Props) {
+export default function Doc({ document: doc, role, shared, me }: Props) {
     const [email, setEmail] = useState('');
     const [shareRole, setShareRole] = useState('viewer');
     const [versions, setVersions] = useState<{ version: number; created_at: string}[]>([]);
     const [preview, setPreview] = useState<{version: number; content: string} | null>(null);
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const canEdit = role === 'owner' || role === 'editor';
-    const { text, onChange, textareaRef, status } = useCollabText({docId: doc.id, initialText: doc.content ?? '', initialVersion: doc.version, canEdit});
+    const { members, cursors, sendCursor, shiftCursors } = usePresence(doc.id, me);
+    const [scrollTop, setScrollTop] = useState(0);
+    const boxStyle: React.CSSProperties = {
+        width: 640,
+        height: 360,
+        padding: 8,
+        border: '1px solid #888',
+        boxSizing: 'border-box',
+        font: '14px/1.5 monospace',
+        whiteSpace: 'pre-wrap',
+        wordBreak: 'break-word',
+        margin: 0,
+    };
+    function reportCursor(t: HTMLTextAreaElement) {
+        const cp = (i: number) => Array.from(t.value.slice(0, i)).length;
+        sendCursor(cp(t.selectionStart), cp(t.selectionEnd));
+    }
+    const { text, onChange, textareaRef, status } = useCollabText({docId: doc.id, initialText: doc.content ?? '', initialVersion: doc.version, canEdit, onOp: shiftCursors,});
     const [selection, setSelection] = useState<Selection>(null);
 
     function xsrf() {
@@ -64,24 +84,34 @@ export default function Doc({ document: doc, role, shared }: Props) {
                 <label> {doc.title}&#9;</label>
                 <a href={`/docs/${doc.id}/export`}>Скачать .md</a>
             </h1>
-            <textarea
-                ref={textareaRef}
-                value={text}
-                onChange={(e) => onChange(e.target.value)}
-                readOnly={!canEdit || status === 'error'}
-                rows={20}
-                cols={80}
-                onSelect={(e) => {
-                    const t = e.currentTarget;
-                    if (t.selectionEnd > t.selectionStart) {
-                        setSelection({
-                            start: t.selectionStart,
-                            end: t.selectionEnd,
-                            quote: t.value.slice(t.selectionStart, t.selectionEnd).slice(0, 500),
-                        });
-                    }
-                }}
-            />
+            <p>Сейчас в документе:{' '} {members.map((m) => (<span key={m.id} style={{ color: colorOf(m.id), marginRight: 8 }}>● {m.name}</span>))}</p>
+<           div style={{ position: 'relative', width: 640 }}>
+                <textarea
+                    ref={textareaRef}
+                    value={text}
+                    onChange={(e) => {
+                        onChange(e.target.value);
+                        reportCursor(e.currentTarget);
+                    }}
+                    onKeyUp={(e) => reportCursor(e.currentTarget)}
+                    onClick={(e) => reportCursor(e.currentTarget)}
+                    onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}
+                    onSelect={(e) => {
+                        const t = e.currentTarget;
+                        reportCursor(t);
+                        if (t.selectionEnd > t.selectionStart) {
+                            setSelection({
+                                start: t.selectionStart,
+                                end: t.selectionEnd,
+                                quote: t.value.slice(t.selectionStart, t.selectionEnd).slice(0, 500),
+                            });
+                        }
+                    }}
+                    readOnly={!canEdit || status === 'error'}
+                    style={{ ...boxStyle, display: 'block', resize: 'none', overflowY: 'scroll' }}
+                />
+                <RemoteCursors text={text} cursors={cursors} members={members} scrollTop={scrollTop} boxStyle={boxStyle} />
+            </div>
             <p>{STATUS_LABEL[status]}</p>
             <button onClick={loadHistory}>История версий</button>
             {versions.length > 0 && (

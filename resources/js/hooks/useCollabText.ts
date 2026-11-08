@@ -2,11 +2,20 @@ import { useEcho } from '@laravel/echo-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { CollabSession } from '../ot/CollabSession';
 import type { ServerMessage, SyncStatus } from '../ot/CollabSession';
+import type { TextOperation } from '../ot/TextOperation';
+
+type Options = {
+    docId: number;
+    initialText: string;
+    initialVersion: number;
+    canEdit: boolean;
+    onOp?: (op: TextOperation) => void; // нужно для курсоров
+};
 
 const toCp = (s: string, i: number) => Array.from(s.slice(0, i)).length;
 const toUtf16 = (s: string, cp: number) => Array.from(s).slice(0, cp).join('').length;
 
-export function useCollabText(p: { docId: number; initialText: string; initialVersion: number; canEdit: boolean }) {
+export function useCollabText(p: Options) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const sel = useRef<[number, number] | null>(null);
     const [text, setText] = useState(p.initialText);
@@ -17,8 +26,9 @@ export function useCollabText(p: { docId: number; initialText: string; initialVe
         session.start({
             onStatus: setStatus,
             onRemoteText: (next, prev, op) => {
+                p.onOp?.(op);
                 const el = textareaRef.current;
-                if (el && window.document.activeElement === el) { // сдвигаем курсор
+                if (el && window.document.activeElement === el) {
                     sel.current = [
                         toUtf16(next, op.transformIndex(toCp(prev, el.selectionStart))),
                         toUtf16(next, op.transformIndex(toCp(prev, el.selectionEnd))),
@@ -40,7 +50,9 @@ export function useCollabText(p: { docId: number; initialText: string; initialVe
     function onChange(value: string) {
         if (!p.canEdit || session.isFailed) return;
         setText(value);
-        session.localEdit(value);
+        const op = session.localEdit(value);
+        if (op) p.onOp?.(op);
     }
+
     return { text, onChange, textareaRef, status };
 }

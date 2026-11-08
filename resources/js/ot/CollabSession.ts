@@ -39,13 +39,14 @@ export class CollabSession {
     start(h: Handlers) { this.handlers = h; void this.catchUp(); }
     stop() { this.handlers = null; }
 
-    localEdit(next: string) {
-        if (!this.canEdit || this.isFailed) return;
-        const op = TextOperation.diff(this.text, next);
-        if (op.isNoop()) return;
-        this.text = next;
+    localEdit(nextText: string): TextOperation | null {
+        if (!this.canEdit || this.isFailed) return null;
+        const op = TextOperation.diff(this.text, nextText);
+        if (op.isNoop()) return null;
+        this.text = nextText;
         this.client.applyClient(op);
         this.status();
+        return op;
     }
 
     receive(m: ServerMessage) {

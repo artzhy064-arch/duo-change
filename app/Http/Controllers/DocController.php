@@ -36,6 +36,7 @@ class DocController extends Controller {
                 'email' => $u->email,
                 'role' => $u->pivot->role,
             ]) : [],
+            'me' => $request->user()->only('id', 'name'),
         ]);
     }
     public function update(Request $request, Doc $doc) {
