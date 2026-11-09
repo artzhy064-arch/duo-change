@@ -54,7 +54,203 @@ composer run dev
 - `database/migrations` — схема БД
 
 
-<iframe src="https://mermaid.live/embed?theme=dark&look=classic&mode=dark#pako:eNqdVt1u0zAUfhXL4qId2QRI3FRTpYkJgYS0SRsgQVDlJm5rmtjBPumIpklbd7kr3mRC6_iZGK-QvBF2m7AmcVpGelOf38_nnO8kx9gTPsUd7AVEqV1GhpKErnQ50s9chl4rKtFxITPPQ8YBMb8kUiAZHyJOQmqT05CwoKToCxEgpnrEDxmvRVcgJBnS3qdYAOmN-4XBSRnbrvD-GRowCKzYPMGBcqiFmVCpmKhjE0ecyl4liRQBfS5ky1SrjRaRm0HHoU64T2XIlElhuYOfG1XzGF2s6vnzuxgYDWn3IioJ2LNZkvwnAC9gFqeiBUlU7sBHpeFEJAkE8dfVv3KdA04iNRJwz9rZmmqfg0q-ZyI0Me-ZjsQwEtKmiYhs8uGe8VFAJDQpKbcW2NDFOuN94Sc2uU4CsSppfAIUWEiRpEoEE-r3SFNNdjxgEwbJKzG01MU2JavqlUMiHjQ0yKegt4hqAHNIP0PTjEvjyVu8XQGjEUJLlaU-DSjQqi2JoiBpaehVci982GDQGkgROghE-0EZSxMfDw8l4WogZFhbsFBoWsRB_XY53vsnH5o4kXDvgMoJ82gloIr7IQOD35n3xcmJ-tLX8Ymibxa0cJCI2mgd8hfMrOfEniln0U6eLOfb-pW4LwLmJZVgE0aPWuVGxJEZ0IrQW5CzIs0HuCadmK63163JHd1xRv0you1t7c3BQW9p_0B4Ywrdbvm1JvUq84iCPV5JURzm71MXP3Yx2tzs6n8b-p95kXVQ-jW9SS_Tq3SWzrJpxWHD5nCV3mZn2TQ7T38X5kZjCV955ayyvmORznCdnWen6S8N62aVz991rF1-auPr9Cq7SGfo6SNzq1l2mp2l39Mfq0LkG7YwKRZug5lJdJtN58Gn2cXK6i7tqcJumSpbW90yG5uMrLSuRVqqnr70bfpNd-ky-3LX0EaPYuS046l2OdO_i_lELE1DhXzGv6j9CpMa6jvGGbU-YQcPJfNxB2RMHayroD_Z9BEfuxhGVH_W4Y6LfSLHLnZcHAgxnkvmrGGei090hIjwd0KERRAp4uEIdwYkUPq0YG7-jbkwOfkDl2NrPA" width="100%" height="480" style="border:0" loading="lazy" title="Mermaid diagram" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+### Диаграммы duo-change
+
+#### 1. Последовательность: два редактора одновременно вставляют текст
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor A as Редактор A (браузер)
+    actor B as Редактор B (браузер)
+    participant S as Laravel (OperationController + SyncService)
+    participant DB as БД (documents, operations)
+    participant WS as Reverb (WebSocket)
+
+    Note over A,B: Оба видят документ "ab", версия 0
+
+    par одновременный ввод
+        A->>A: печатает X, локально "aXb"<br/>op = [1,"X",1]
+        A->>S: POST /docs/1/ops {baseVersion:0, op:[1,"X",1]}
+    and
+        B->>B: печатает Y, локально "aYb"<br/>op = [1,"Y",1]
+        B->>S: POST /docs/1/ops {baseVersion:0, op:[1,"Y",1]}
+    end
+
+    Note over S: Блокировка документа: запросы обрабатываются по очереди
+
+    S->>S: проверка прав: Gate update (A)
+    S->>DB: журнал после версии 0: пусто
+    S->>DB: версия 1 = [1,"X",1], content = "aXb"
+    S->>WS: событие doc.op {version:1, clientId:A, op:[1,"X",1]}
+
+    S->>S: проверка прав: Gate update (B)
+    S->>DB: журнал после версии 0: [1,"X",1]
+    S->>S: transform(журнал, входящая)<br/>[1,"Y",1] становится [2,"Y",1]
+    S->>DB: версия 2 = [2,"Y",1], content = "aXYb"
+    S->>WS: событие doc.op {version:2, clientId:B, op:[2,"Y",1]}
+
+    WS-->>A: версия 1 (своя операция): ack
+    WS-->>B: версия 1 (чужая операция)
+    Note over B: transform(пришедшая, локальная)<br/>"aYb" становится "aXYb"
+    WS-->>A: версия 2 (чужая операция)
+    Note over A: "aXb" становится "aXYb"
+    WS-->>B: версия 2 (своя операция): ack
+
+    Note over A,B: У обоих "aXYb", версия 2. Тексты сошлись.
+```
+
+#### 2. Состояния комментария
+
+```mermaid
+stateDiagram-v2
+    [*] --> Open: создан
+    Open --> Resolved: закрыть (владелец, редактор)
+    Reopened --> Resolved: закрыть
+    Resolved --> Reopened: открыть заново
+```
+
+#### 3. Use Case по ролям
+
+```mermaid
+flowchart LR
+    V([Наблюдатель])
+    C([Комментатор])
+    E([Редактор])
+    O([Владелец])
+    AD([Администратор])
+
+    subgraph Система["duo-change"]
+        U1(Просмотр документа и истории)
+        U2(Скачать документ .md)
+        U3(Оставить комментарий и ответить в ветке)
+        U4(Редактировать текст в реальном времени)
+        U5(Закрыть и открыть заново комментарий)
+        U6(Создать, удалить, импортировать документ)
+        U7(Назначить роли доступа)
+        U8(Откатить к версии)
+        U9(Управлять квотами хранения)
+        U10(Смотреть журнал активности)
+    end
+
+    V --> U1
+    V --> U2
+    C --> U1
+    C --> U3
+    E --> U1
+    E --> U3
+    E --> U4
+    E --> U5
+    O --> U1
+    O --> U3
+    O --> U4
+    O --> U5
+    O --> U6
+    O --> U7
+    O --> U8
+    AD --> U9
+    AD --> U10
+```
+
+#### 4. Диаграмма классов
+
+```mermaid
+classDiagram
+    class User {
+        +int id
+        +string name
+        +string email
+        +bool is_admin
+        +int storage_quota_kb
+    }
+    class Doc {
+        +int id
+        +string title
+        +string content
+        +int version
+        +int owner_id
+        +roleFor(User) string
+    }
+    class DocumentPermission {
+        +int document_id
+        +int user_id
+        +string role
+    }
+    class Operation {
+        +int id
+        +int document_id
+        +int user_id
+        +string client_id
+        +string type
+        +json payload
+        +int version
+    }
+    class Snapshot {
+        +int document_id
+        +int version
+        +string content
+    }
+    class Comment {
+        +int document_id
+        +int author_id
+        +int parent_id
+        +int anchor_start
+        +int anchor_end
+        +string quote
+        +string body
+        +string status
+        +datetime resolved_at
+    }
+    class ActivityLog {
+        +int user_id
+        +int document_id
+        +string action
+        +string details
+    }
+    class TextOperation {
+        +retain(n)
+        +insert(s)
+        +delete(n)
+        +apply(doc) string
+        +diff(from, to)$ TextOperation
+    }
+    class OTTransformer {
+        +transform(a, b) TextOperation[2]
+    }
+    class SyncService {
+        +submit(doc, user, clientId, baseVersion, op) Operation
+    }
+    class HistoryService {
+        +contentAt(doc, version) string
+    }
+    class DocPolicy {
+        +view()
+        +update()
+        +comment()
+        +resolve()
+        +revert()
+    }
+    class OperationApplied {
+        <<event, WebSocket>>
+        +broadcastOn()
+    }
+
+    User "1" --> "*" Doc : владеет
+    User "*" --> "*" Doc : доступ
+    Doc "1" --> "*" DocumentPermission
+    Doc "1" --> "*" Operation : журнал
+    Doc "1" --> "*" Snapshot : каждые 50 версий
+    Doc "1" --> "*" Comment
+    Comment "1" --> "*" Comment : ответы
+    User "1" --> "*" ActivityLog
+    SyncService ..> OTTransformer
+    SyncService ..> TextOperation
+    SyncService ..> Operation : создаёт
+    SyncService ..> OperationApplied : рассылает
+    HistoryService ..> Snapshot
+    HistoryService ..> Operation
+    DocPolicy ..> Doc
+```
 
 ## Автор
 artzhy064-arch — 2026
