@@ -8,26 +8,37 @@ type Theme = 'light' | 'dark' | 'mixed';
 type DocumentItem = {
     id: number;
     title: string;
-    content: string | null;
-    owner_id: number;
-    created_at: string;
     updated_at: string;
+    is_owner: boolean;
+    role: string;
+    owner_name: string;
+    preview: string;
 };
 
 type MyDocProps = {
     documents: DocumentItem[];
+    storage: { used_kb: number; quota_kb: number };
 };
 
-export default function MyDoc({ documents: documents = [] }: MyDocProps) {
+const ROLE_LABEL: Record<string, string> = {
+    owner: 'Владелец',
+    editor: 'Редактор',
+    commenter: 'Комментатор',
+    viewer: 'Наблюдатель',
+};
+
+const formatDate = (iso: string) =>
+    new Date(iso).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+export default function MyDoc({ documents = [], storage }: MyDocProps) {
     const [theme, setTheme] = useState<Theme>('mixed');
     const [search, setSearch] = useState('');
-    const { auth } = usePage<{auth: {user: { name: string } } }>().props;
+    const { auth } = usePage<{ auth: { user: { name: string; is_admin?: boolean } } }>().props;
     const [section, setSection] = useState('all');
     const [showThemes, setShowThemes] = useState(false);
     const [newTitle, setNewTitle] = useState('');
-    const { errors } = usePage<{ errors: Record<string, string> }>().props;
 useEffect(() => {
-    const savedTheme = localStorage.getItem('mydocs-theme') as Theme | null; 
+    const savedTheme = localStorage.getItem('mydocs-theme') as Theme | null;
 
     if (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'mixed') {
         setTheme(savedTheme);
@@ -58,15 +69,12 @@ function deleteDocument(id: number) {
 //     );
 // }
 
-const filteredDocuments = documents.filter((item) => {
-    const matchesSearch = item.title.toLowerCase().includes(search.toLowerCase());
-
-    if (section === 'recent') {
-        return matchesSearch;
-    }
-
-    return matchesSearch;
-});
+// документы приходят отсортированными по свежести
+const mine = documents.filter((d) => d.is_owner);
+const sharedWithMe = documents.filter((d) => !d.is_owner);
+const list = section === 'shared' ? sharedWithMe : section === 'recent' ? documents.slice(0, 6) : mine;
+const filteredDocuments = list.filter((d) => d.title.toLowerCase().includes(search.toLowerCase()));
+const usedPct = storage.quota_kb ? Math.min(100, Math.round((storage.used_kb / storage.quota_kb) * 100)) : 100;
 
 const themeNames: Record<Theme, string> = {
     light: 'Светлая',
@@ -85,10 +93,7 @@ return (
             <button className="create-button" onClick={createDocument}>
                 <span>＋</span> Создать документ
             </button>
-            <input type="file" accept=".txt,.md" onChange={(e) => { const file = e.target.files?.[0];
-                if (file) router.post('/docs/import', { file }, { forceFormData: true }); }} />
             <br />
-            {errors.file && <p>{errors.file}</p>}
             <input value={newTitle} onChange={(event) => setNewTitle(event.target.value)} placeholder='Название документа'></input>
             <div className="nav-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
 
@@ -100,43 +105,43 @@ return (
                 <button className={section === 'recent' ? 'nav-item active' : 'nav-item'} onClick={() => setSection('recent')}>
                     <span className="nav-icon">◷</span> Недавние
                 </button>
-                <button className={section === 'favorites' ? 'nav-item active' : 'nav-item'} onClick={() => setSection('favorites')}>
-                    <span className="nav-icon">☆</span> Избранное
-                </button>
             </nav>
 
-            <div className="nav-caption second-caption">УПРАВЛЕНИЕ</div>
+            <div className="nav-caption second-caption">СОВМЕСТНАЯ РАБОТА</div>
 
             <nav className="main-nav">
-                <button className="nav-item" onClick={() => window.alert('Раздел общего доступа добавим позже.')}>
+                <button className={section === 'shared' ? 'nav-item active' : 'nav-item'} onClick={() => setSection('shared')}>
                     <span className="nav-icon">♧</span> Доступные мне
+                    <span className="nav-count">{sharedWithMe.length}</span>
                 </button>
-                <button className="nav-item" onClick={() => window.alert('Корзину подключим позже.')}>
-                    <span className="nav-icon">♲</span> Корзина
-                </button>
+                {auth.user.is_admin && (
+                    <a className="nav-item" href="/admin">
+                        <span className="nav-icon">⚙</span> Админка
+                    </a>
+                )}
             </nav>
 
             <div className="sidebar-bottom">
                 <div className="storage-card">
                     <div className="storage-heading">
                         <span>☁ Хранилище</span>
-                        <span>12%</span>
+                        <span>{usedPct}%</span>
                     </div>
                     <div className="storage-track">
-                        <div className="storage-progress"></div>
+                        <div className="storage-progress" style={{ width: `${usedPct}%` }}></div>
                     </div>
-                    <p>Использовано 1,2 ГБ из 10 ГБ</p>
+                    <p>Использовано {storage.used_kb} КБ из {storage.quota_kb} КБ</p>
                 </div>
 
-                <button className="profile-button">
-                    <span className="avatar">{auth.user.name}</span>
+                <div className="profile-button">
+                    <span className="avatar">{auth.user.name.slice(0, 1).toUpperCase()}</span>
                     <span className="profile-info">
                         <strong>{auth.user.name}</strong>
-                        <button onClick={() => router.post('/logout')}>Logout</button>
+                        <button onClick={() => router.post('/logout')}>Выйти</button>
                         <small>Личное пространство</small>
                     </span>
                     <span className="profile-menu">···</span>
-                </button>
+                </div>
             </div>
         </aside>
 
@@ -211,9 +216,9 @@ return (
                         <span><strong>Все документы</strong><small>Продолжи свою работу</small></span>
                         <span className="quick-arrow">↗</span>
                     </button>
-                    <button className="quick-card" onClick={() => setSection('favorites')}>
-                        <span className="quick-icon favorite-icon">☆</span>
-                        <span><strong>Избранное</strong><small>Важное всегда под рукой</small></span>
+                    <button className="quick-card" onClick={() => setSection('shared')}>
+                        <span className="quick-icon favorite-icon">♧</span>
+                        <span><strong>Доступные мне</strong><small>Документы коллег</small></span>
                         <span className="quick-arrow">↗</span>
                     </button>
                 </section>
@@ -221,7 +226,7 @@ return (
                 <section className="documents-section">
                     <div className="section-heading">
                         <div>
-                            <h2>{section === 'favorites' ? 'Избранное' : section === 'recent' ? 'Недавние документы' : 'Мои документы'} <span>{filteredDocuments.length}</span></h2>
+                            <h2>{section === 'shared' ? 'Доступные мне' : section === 'recent' ? 'Недавние документы' : 'Мои документы'} <span>{filteredDocuments.length}</span></h2>
                             <p>Твои документы и последние изменения</p>
                         </div>
 
@@ -255,12 +260,14 @@ return (
                                     <div className="document-title-row">
                                         <span className={"file-icon"}>▤</span>
                                         <h3><Link href={`/docs/${item.id}`}>{item.title}</Link></h3>
-                                        <button onClick={() => deleteDocument(item.id)}>Удалить</button>
-                                        <button className="more-button" title="Дополнительные действия" onClick={() => window.alert('Меню документа добавим позже.')}>···</button>
+                                        {item.is_owner && <button onClick={() => deleteDocument(item.id)}>Удалить</button>}
                                     </div>
+                                    {item.preview && <p className="document-meta">{item.preview}</p>}
                                     <div className="document-meta">
+                                        <span>{ROLE_LABEL[item.role] ?? item.role}</span>
+                                        {!item.is_owner && <><span className="meta-dot">·</span><span>{item.owner_name}</span></>}
                                         <span className="meta-dot">·</span>
-                                        <span>{item.updated_at}</span>
+                                        <span>{formatDate(item.updated_at)}</span>
                                     </div>
                                 </div>
                             </article>

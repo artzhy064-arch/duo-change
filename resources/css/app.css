@@ -253,16 +253,8 @@ color: var(--md-sidebar-muted);
 font-size: 10px;
 }
 
-.profile-button {
+div.profile-button {
 width: 100%;
-display: flex;
-align-items: center;
-gap: 10px;
-padding: 12px 3px 0;
-border: 0;
-border-top: 1px solid var(--md-border);
-color: var(--md-sidebar-text);
-background: transparent;
 text-align: left;
 }
 

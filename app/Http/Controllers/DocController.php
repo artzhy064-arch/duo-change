@@ -1,17 +1,40 @@
 <?php
 namespace App\Http\Controllers;
 use App\Models\Doc;
-use Illuminate\Http\Request;
+use App\Models\ActivityLog;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Gate;
-use App\Models\ActivityLog;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
 // use App\Events\DocEdited;
 
 class DocController extends Controller {
-    public function index(Request $request) {
+    public function index(Request $request)
+    {
         $user = $request->user();
-        $documents = Doc::where('owner_id', $user->id)->orWhereHas('sharedUsers', fn ($q) => $q->where('user_id', $user->id))->latest()->get();
-        return Inertia::render('myDoc', ['documents' => $documents]);
+
+        $documents = Doc::with('owner:id,name')
+            ->where('owner_id', $user->id)
+            ->orWhereHas('sharedUsers', fn ($q) => $q->where('user_id', $user->id))
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(fn (Doc $d) => [
+                'id' => $d->id,
+                'title' => $d->title,
+                'updated_at' => $d->updated_at,
+                'is_owner' => (int) $d->owner_id === $user->id,
+                'role' => $d->roleFor($user),
+                'owner_name' => $d->owner->name,
+                'preview' => mb_substr($d->content ?? '', 0, 100),
+            ]);
+
+        return Inertia::render('myDoc', [
+            'documents' => $documents,
+            'storage' => [
+                'used_kb' => (int) ceil(Doc::where('owner_id', $user->id)->sum(DB::raw('length(content)')) / 1024),
+                'quota_kb' => $user->storage_quota_kb,
+            ],
+        ]);
     }
     public function store(Request $request) {
         $request->validate(['title' => 'required|string|max:255']);
