@@ -37,7 +37,7 @@ Laravel 13, Inertia.js, React, Tailwind CSS, SQLite, Laravel Reverb
 ## Запуск
 ```bash
 git clone https://github.com/artzhy064-arch/duo-change
-cd collab-docs
+cd duo-change
 composer install
 npm install
 cp .env.example .env
