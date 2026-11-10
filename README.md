@@ -32,7 +32,7 @@
 - [x] Комментарии
 
 ## Стек
-Laravel 13, Inertia.js, React, Tailwind CSS, SQLite, Laravel Reverb (планируется)
+Laravel 13, Inertia.js, React, Tailwind CSS, SQLite, Laravel Reverb
 
 ## Запуск
 ```bash
